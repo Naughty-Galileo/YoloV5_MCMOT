@@ -127,15 +127,30 @@ class Detect_Track:
 if __name__ =='__main__':
     video_path = './video/palace.mp4'
     capture = cv2.VideoCapture(video_path)
+    
     model = Detect_Track()
     frame_id = 0
+
+    fps = capture.get(cv2.CAP_PROP_FPS) 
+    size = (int(capture.get(cv2.CAP_PROP_FRAME_WIDTH)), 
+        int(capture.get(cv2.CAP_PROP_FRAME_HEIGHT)))
+    fourcc = cv2.VideoWriter_fourcc('I', '4', '2', '0')
+    outVideo = cv2.VideoWriter('./video/result.avi',fourcc,fps,size) 
+
     while True:
         ret, frame = capture.read()
         if not ret:
             break
         img_vis, clss, tlwhs, tids = model(frame)
-        if frame_id % 100 == 0:
-            cv2.imwrite('./assert/{}.jpg'.format(frame_id), img_vis)
+        outVideo.write(img_vis) 
+        cv2.waitKey(1) 
         frame_id += 1
         # cv2.imshow('track', img)
         # cv2.waitKey(10)
+    capture.release() 
+    outVideo.release() 
+
+    from moviepy.editor import *
+
+    clip = (VideoFileClip('./video/result.avi'))
+    clip.write_gif("./assert/demo.gif")
