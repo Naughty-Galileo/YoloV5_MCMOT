@@ -25,6 +25,11 @@ from sort_tracker.sort import Sort
 import warnings
 warnings.filterwarnings("ignore")
 
+def get_color(idx):
+    idx = idx * 3
+    color = ((37 * idx) % 255, (17 * idx) % 255, (29 * idx) % 255)
+
+    return color
 
 
 class Detect_Track:
@@ -103,8 +108,9 @@ class Detect_Track:
                             tids.append(t.track_id)
 
                             if self.vis:
-                                cv2.rectangle(img_vis, (int(t.tlwh[0]), int(t.tlwh[1])), (int(t.tlwh[0]+t.tlwh[2]), int(t.tlwh[1]+t.tlwh[3])), (255,0,0), 2)
-                                cv2.putText(img_vis, self.names[int(t.cls.item())]+'  '+str(t.track_id), (int(t.tlwh[0]),int(t.tlwh[1])), cv2.FONT_HERSHEY_COMPLEX, 0.8, [0, 0, 255])
+                                color = get_color(int(t.cls.item())+1)
+                                cv2.rectangle(img_vis, (int(t.tlwh[0]), int(t.tlwh[1])), (int(t.tlwh[0]+t.tlwh[2]), int(t.tlwh[1]+t.tlwh[3])), color, 2)
+                                cv2.putText(img_vis, self.names[int(t.cls.item())]+'  '+str(t.track_id), (int(t.tlwh[0]),int(t.tlwh[1])), cv2.FONT_HERSHEY_COMPLEX, 0.8, color)
                 
                 elif self._type == 'Sort':
                     online_targets  = self.tracker.update(det[:, :6].cpu(), [image.shape[0], image.shape[1]], self.imgsz)
@@ -142,8 +148,8 @@ if __name__ =='__main__':
         if not ret:
             break
         img_vis, clss, tlwhs, tids = model(frame)
-        outVideo.write(img_vis) 
-        cv2.waitKey(1) 
+        if frame_id % 2 == 0:
+            outVideo.write(img_vis)
         frame_id += 1
         # cv2.imshow('track', img)
         # cv2.waitKey(10)
