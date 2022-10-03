@@ -1,4 +1,4 @@
-# YoloV5_MCMT
+# YoloV5_MCMOT
 YoloV5+sort/deepsort/bytetrack+多类别
 
 ## Yolov5 + ByteTrack MCMOT 2022/10/2
