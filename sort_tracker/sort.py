@@ -85,7 +85,7 @@ class KalmanBoxTracker(object):
     This class represents the internal state of individual tracked objects observed as bbox.
     """
     count = 0
-    def __init__(self,bbox):
+    def __init__(self, bbox, clss=0):
         """
         Initialises a tracker using initial bounding box.
         """
@@ -108,6 +108,8 @@ class KalmanBoxTracker(object):
         self.hits = 0
         self.hit_streak = 0
         self.age = 0
+        
+        self.clss = clss
 
     def update(self,bbox):
         """
@@ -215,7 +217,7 @@ class Sort(object):
         remain_inds = scores > self.det_thresh
         scores = scores[remain_inds]
         bboxes = bboxes[remain_inds]
-        clss = clss[remain_inds]
+        clss = clss[remain_inds].numpy()
         
         dets = np.concatenate((bboxes, np.expand_dims(scores, axis=-1)), axis=1)
         
@@ -232,21 +234,23 @@ class Sort(object):
         for t in reversed(to_del):
             self.trackers.pop(t)
         matched, unmatched_dets, unmatched_trks = associate_detections_to_trackers(dets, trks, self.iou_threshold)
+        
 
         # update matched trackers with assigned detections
         for m in matched:
-            self.trackers[m[1]].update(dets[m[0], :])
+            if self.trackers[m[1]].clss == int(clss[m[0]]):
+                self.trackers[m[1]].update(dets[m[0], :])
 
         # create and initialise new trackers for unmatched detections
         for i in unmatched_dets:
-            trk = KalmanBoxTracker(dets[i,:])
+            trk = KalmanBoxTracker(dets[i,:], int(clss[i]))
             self.trackers.append(trk)
 
         i = len(self.trackers)
         for trk in reversed(self.trackers):
             d = trk.get_state()[0]
             if (trk.time_since_update < 1) and (trk.hit_streak >= self.min_hits or self.frame_count <= self.min_hits):
-                ret.append(np.concatenate((d,[trk.id+1])).reshape(1,-1)) # +1 as MOT benchmark requires positive
+                ret.append(np.concatenate((d,[trk.id+1],[trk.clss])).reshape(1,-1)) # +1 as MOT benchmark requires positive
             i -= 1
             # remove dead tracklet
             if(trk.time_since_update > self.max_age):
@@ -254,4 +258,4 @@ class Sort(object):
                 
         if(len(ret)>0):
             return np.concatenate(ret)
-        return np.empty((0,5))
+        return np.empty((0,6))

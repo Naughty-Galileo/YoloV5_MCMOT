@@ -118,13 +118,16 @@ class Detect_Track:
                         for t in online_targets:
                             tlwh = [t[0], t[1], t[2] - t[0], t[3] - t[1]]
                             tid = t[4]
-
+                            cls = t[5]
+                            
                             tlwhs.append(tlwh)
                             tids.append(int(tid))
+                            clss.append(cls)
 
                             if self.vis:
-                                cv2.rectangle(img_vis, (int(tlwh[0]), int(tlwh[1])), (int(tlwh[0]+tlwh[2]), int(tlwh[1]+tlwh[3])), (255,0,0), 2)
-                                cv2.putText(img_vis, str(tid), (int(t.tlwh[0]),int(t.tlwh[1])), cv2.FONT_HERSHEY_COMPLEX, 0.8, [0, 0, 255]) # self.names[int(t.cls.item())]+'  '+
+                                color = get_color(int(cls)+1)
+                                cv2.rectangle(img_vis, (int(tlwh[0]), int(tlwh[1])), (int(tlwh[0]+tlwh[2]), int(tlwh[1]+tlwh[3])), color, 2)
+                                cv2.putText(img_vis,  self.names[int(cls)]+'  '+str(int(tid)), (int(tlwh[0]),int(tlwh[1])), cv2.FONT_HERSHEY_COMPLEX, 0.8, color) 
 
 
         return img_vis, clss, tlwhs, tids
@@ -148,8 +151,7 @@ if __name__ =='__main__':
         if not ret:
             break
         img_vis, clss, tlwhs, tids = model(frame)
-        if frame_id % 2 == 0:
-            outVideo.write(img_vis)
+        outVideo.write(img_vis)
         frame_id += 1
         # cv2.imshow('track', img)
         # cv2.waitKey(10)
@@ -158,5 +160,5 @@ if __name__ =='__main__':
 
     from moviepy.editor import *
 
-    clip = (VideoFileClip('./video/result.avi'))
+    clip = (VideoFileClip('./video/result.avi').subclip(1,5).resize(0.8))
     clip.write_gif("./assert/demo.gif")
