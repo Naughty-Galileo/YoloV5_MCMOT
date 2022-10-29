@@ -24,3 +24,12 @@ img_vis, clss, tlwhs, tids = model(img)
 
 ## Demo
 ![image](./assert/car_demo.gif)
+
+## Yolov5 + BoTSort MCMOT 2022/10/29
+- Detect_Track
+```python
+from detect_track import Detect_Track
+model = Detect_Track(tracker='BoTSort', model_path='./models/yolov5s.pt', 
+                    imgsz=(640,640), vis=True)
+img_vis, clss, tlwhs, tids = model(img)  
+```
