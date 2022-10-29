@@ -1,5 +1,6 @@
 # YoloV5_MCMOT
-YoloV5+sort/deepsort/bytetrack+多类别
+> YoloV5+sort/deepsort/bytetrack/BoTSort 多类别
+> 尽量简单的调用
 
 ## Yolov5 + ByteTrack MCMOT 2022/10/2
 - Detect_Track
