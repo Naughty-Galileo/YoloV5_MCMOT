@@ -7,7 +7,7 @@ import torch
 import torch.nn.functional as F
 
 from .kalman_filter import KalmanFilter
-from tracker import matching
+from bytetrack_tracker import matching
 from .basetrack import BaseTrack, TrackState
 
 class STrack(BaseTrack):
@@ -228,7 +228,7 @@ class BYTETracker(object):
         if len(dets_second) > 0:
             '''Detections'''
             detections_second = [STrack(STrack.tlbr_to_tlwh(tlbr), s, c) for
-                          (tlbr, s, c) in zip(dets_second, scores_second, cls_second)]
+                          (tlbr, s, c) in zip(dets_second, scores_second, clss_second)]
         else:
             detections_second = []
         r_tracked_stracks = [strack_pool[i] for i in u_track if strack_pool[i].state == TrackState.Tracked]
