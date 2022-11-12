@@ -19,7 +19,7 @@ from yolov5.models.common import DetectMultiBackend
 from yolov5.utils.general import check_img_size, non_max_suppression, scale_coords
 from yolov5.utils.augmentations import letterbox
 from bytetrack_tracker.byte_tracker import BYTETracker
-from deepsort_tracker.deepsort import Tracker, NearestNeighborDistanceMetric
+from deepsort_tracker.deepsort import DeepSort
 from sort_tracker.sort import Sort
 from bot_tracker.mc_bot_sort import BoTSORT
 
@@ -53,12 +53,8 @@ class Detect_Track:
             self.tracker = BYTETracker(track_thresh=0.5, track_buffer=70, match_thresh=0.8)
             self._type = 'ByteTrack'
 
-        elif tracker == 'Deepsort':
-            max_cosine_distance = 0.1
-            metric = NearestNeighborDistanceMetric(
-                "cosine", max_cosine_distance, 100)
-            self.tracker = Tracker(
-                metric, max_iou_distance=0.7, max_age=30, n_init=3)
+        elif tracker == 'DeepSort':
+            self.tracker = DeepSort('./models/ckpt.t7', max_dist=0.1, min_confidence=0.3, nms_max_overlap=1.0, max_iou_distance=0.7, max_age=30, n_init=3, nn_budget=100, use_cuda=True)
             self._type = 'DeepSort'
 
         elif tracker == 'Sort':
@@ -73,7 +69,7 @@ class Detect_Track:
             self._type = "BoTSort"
 
         else:
-            raise Exception('Tracker must be ByteTrack/Deepsort/Sort/BoTSort.')
+            raise Exception('Tracker must be ByteTrack/DeepSort/Sort/BoTSort.')
 
         
     @torch.no_grad()
@@ -154,6 +150,23 @@ class Detect_Track:
                             color = get_color(int(tcls)+1)
                             cv2.rectangle(img_vis, (int(tlwh[0]), int(tlwh[1])), (int(tlwh[0]+tlwh[2]), int(tlwh[1]+tlwh[3])), color, 2)
                             cv2.putText(img_vis,  self.names[int(tcls)]+'  '+str(int(tid)), (int(tlwh[0]),int(tlwh[1])), cv2.FONT_HERSHEY_COMPLEX, 0.8, color) 
+                
+                elif self._type == "DeepSort":
+                    online_targets  = self.tracker.update(det[:, :6].cpu(), image)
+                    for t in online_targets:
+                        tlbr = [t[0], t[1], t[2], t[3]]
+                        tlwh = [t[0], t[1], t[2]-t[0], t[3]-t[1]]
+                        tid = t[4]
+                        tcls = t[5]
+
+                        tlwhs.append(tlwh)
+                        tids.append(int(tid))
+                        clss.append(tcls)
+
+                        if self.vis:
+                            color = get_color(int(tcls)+1)
+                            cv2.rectangle(img_vis, (int(tlwh[0]), int(tlwh[1])), (int(tlwh[0]+tlwh[2]), int(tlwh[1]+tlwh[3])), color, 2)
+                            cv2.putText(img_vis,  self.names[int(tcls)]+'  '+str(int(tid)), (int(tlwh[0]),int(tlwh[1])), cv2.FONT_HERSHEY_COMPLEX, 0.8, color)
 
         return img_vis, clss, tlwhs, tids
 
