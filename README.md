@@ -1,5 +1,5 @@
 # YoloV5_MCMOT
-> YoloV5+Sort/DeepSort/ByteTrack/BoTSort 多类别
+> YoloV5+Sort/DeepSort/ByteTrack/BoTSort/motdt 多类别
 > 尽量简单的调用 \
 > tracker的参数从detect_track.py中更改
 
