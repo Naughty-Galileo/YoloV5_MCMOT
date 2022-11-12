@@ -17,7 +17,7 @@ from .basetrack import BaseTrack, TrackState
 
 class STrack(BaseTrack):
 
-    def __init__(self, tlwh, score, max_n_features=100, from_det=True):
+    def __init__(self, tlwh, score, cls, max_n_features=100, from_det=True):
 
         # wait activate
         self._tlwh = np.asarray(tlwh, dtype=np.float)
@@ -26,6 +26,7 @@ class STrack(BaseTrack):
         self.is_activated = False
 
         self.score = score
+        self.cls = cls
         self.max_n_features = max_n_features
         self.curr_feature = None
         self.last_feature = None
@@ -125,6 +126,7 @@ class STrack(BaseTrack):
         self.is_activated = True
 
         self.score = new_track.score
+        self.cls = new_track.cls
 
         if update_feature:
             self.set_feature(new_track.curr_feature)
@@ -200,21 +202,21 @@ class OnlineTracker(object):
 
         self.frame_id = 0
 
-    def update(self, output_results, img_info, img_size, img_file_name):
-        image = cv2.imread(img_file_name)
+    def update(self, output_results, img):
+        image = img
         # post process detections
-        output_results = output_results.cpu().numpy()
-        confidences = output_results[:, 4] * output_results[:, 5]
-        
+        output_results = output_results.numpy()
+        confidences = output_results[:, 4]
         bboxes = output_results[:, :4]  # x1y1x2y2
-        img_h, img_w = img_info[0], img_info[1]
-        scale = min(img_size[0] / float(img_h), img_size[1] / float(img_w))
-        bboxes /= scale
+        clss = output_results[:, 5]
+        
         bbox_xyxy = bboxes
         tlwhs = self._xyxy_to_tlwh_array(bbox_xyxy)
         remain_inds = confidences > self.min_cls_score
+        
         tlwhs = tlwhs[remain_inds]
         det_scores = confidences[remain_inds]
+        det_clss = clss[remain_inds]
 
         self.frame_id += 1
 
@@ -230,19 +232,23 @@ class OnlineTracker(object):
         """step 2: scoring and selection"""
         if det_scores is None:
             det_scores = np.ones(len(tlwhs), dtype=float)
-        detections = [STrack(tlwh, score, from_det=True) for tlwh, score in zip(tlwhs, det_scores)]
+        if det_clss is None:
+            det_clss = np.ones(len(tlwhs), dtype=int)
+            
+        detections = [STrack(tlwh, score, cls, from_det=True) for tlwh, score, cls in zip(tlwhs, det_scores, det_clss)]
         if self.use_tracking:
-            tracks = [STrack(t.self_tracking(image), 0.6 * t.tracklet_score(), from_det=False)
+            tracks = [STrack(t.self_tracking(image), 0.6 * t.tracklet_score(), t.cls, from_det=False)
                         for t in itertools.chain(self.tracked_stracks, self.lost_stracks) if t.is_activated]
             detections.extend(tracks)
         rois = np.asarray([d.tlbr for d in detections], dtype=np.float32)
         scores = np.asarray([d.score for d in detections], dtype=np.float32)
+        clss = np.asarray([d.cls for d in detections], dtype=np.int64)
         # nms
         if len(detections) > 0:
             nms_out_index = torchvision.ops.batched_nms(
             torch.from_numpy(rois),
             torch.from_numpy(scores.reshape(-1)).to(torch.from_numpy(rois).dtype),
-            torch.zeros_like(torch.from_numpy(scores.reshape(-1))),
+            torch.from_numpy(clss.reshape(-1)).to(torch.from_numpy(rois).dtype),
             0.7,
             )
             keep = nms_out_index.numpy()
@@ -251,8 +257,12 @@ class OnlineTracker(object):
             keep = np.where(mask & (scores >= self.min_cls_score))[0]
             detections = [detections[i] for i in keep]
             scores = scores[keep]
-            for d, score in zip(detections, scores):
+            clss = clss[keep]
+            
+            for d, score,cls in zip(detections, scores, clss):
                 d.score = score
+                d.cls = cls
+
         pred_dets = [d for d in detections if not d.from_det]
         detections = [d for d in detections if d.from_det]
 

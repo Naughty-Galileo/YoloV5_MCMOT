@@ -22,6 +22,7 @@ from bytetrack_tracker.byte_tracker import BYTETracker
 from deepsort_tracker.deepsort import DeepSort
 from sort_tracker.sort import Sort
 from bot_tracker.mc_bot_sort import BoTSORT
+from motdt_tracker.motdt_tracker import OnlineTracker
 
 import warnings
 warnings.filterwarnings("ignore")
@@ -67,9 +68,14 @@ class Detect_Track:
                                    with_reid = False, proximity_thresh=0.5, appearance_thresh=0.25,
                                    fast_reid_config=None, fast_reid_weights=None, device=None)
             self._type = "BoTSort"
+        
+        elif tracker == "motdt":
+            self.tracker = OnlineTracker('./models/googlenet_part8_all_xavier_ckpt_56.h5', min_cls_score=0.4, min_ap_dist=0.8, 
+                                         max_time_lost=30, use_tracking=True, use_refind=True)
+            self._type = "motdt"
 
         else:
-            raise Exception('Tracker must be ByteTrack/DeepSort/Sort/BoTSort.')
+            raise Exception('Tracker must be ByteTrack/DeepSort/Sort/BoTSort/motdt.')
 
         
     @torch.no_grad()
@@ -168,6 +174,23 @@ class Detect_Track:
                             cv2.rectangle(img_vis, (int(tlwh[0]), int(tlwh[1])), (int(tlwh[0]+tlwh[2]), int(tlwh[1]+tlwh[3])), color, 2)
                             cv2.putText(img_vis,  self.names[int(tcls)]+'  '+str(int(tid)), (int(tlwh[0]),int(tlwh[1])), cv2.FONT_HERSHEY_COMPLEX, 0.8, color)
 
+                elif self._type == "motdt":
+                    online_targets  = self.tracker.update(det[:, :6].cpu(), image)
+                    for t in online_targets:
+                        tlwh = t.tlwh
+                        tlbr = t.tlbr
+                        tid = t.track_id
+                        tcls = t.cls
+
+                        tlwhs.append(tlwh)
+                        tids.append(int(tid))
+                        clss.append(tcls)
+
+                        if self.vis:
+                            color = get_color(int(tcls)+1)
+                            cv2.rectangle(img_vis, (int(tlwh[0]), int(tlwh[1])), (int(tlwh[0]+tlwh[2]), int(tlwh[1]+tlwh[3])), color, 2)
+                            cv2.putText(img_vis,  self.names[int(tcls)]+'  '+str(int(tid)), (int(tlwh[0]),int(tlwh[1])), cv2.FONT_HERSHEY_COMPLEX, 0.8, color)
+
         return img_vis, clss, tlwhs, tids
 
 
@@ -191,8 +214,6 @@ if __name__ =='__main__':
         img_vis, clss, tlwhs, tids = model(frame)
         outVideo.write(img_vis)
         frame_id += 1
-        # cv2.imshow('track', img)
-        # cv2.waitKey(10)
     capture.release() 
     outVideo.release() 
 

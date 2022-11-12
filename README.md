@@ -40,3 +40,12 @@ model = Detect_Track(tracker='DeepSort', model_path='./models/yolov5s.pt',
                     imgsz=(640,640), vis=True)
 img_vis, clss, tlwhs, tids = model(img)  
 ```
+
+
+## Yolov5 + MotDt MCMOT 2022/11/12
+```python
+from detect_track import Detect_Track
+model = Detect_Track(tracker='motdt', model_path='./models/yolov5s.pt', 
+                    imgsz=(640,640), vis=True)
+img_vis, clss, tlwhs, tids = model(img)  
+```
