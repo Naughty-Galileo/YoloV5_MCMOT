@@ -3,6 +3,14 @@
 > 尽量简单的调用 \
 > tracker的参数从detect_track.py中更改
 
+
+## Install
+```bash
+pip3 install -r requirements.txt
+pip3 install cython
+pip3 install cython_bbox
+```
+
 ## Yolov5 + ByteTrack MCMOT 2022/10/2
 ```python
 from detect_track import Detect_Track
