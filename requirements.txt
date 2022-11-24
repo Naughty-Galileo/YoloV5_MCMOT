@@ -38,3 +38,13 @@ thop  # FLOPs computation
 # albumentations>=1.0.3
 # pycocotools>=2.0  # COCO mAP
 # roboflow
+
+# ByteTrack requirements
+loguru
+scikit-image
+tqdm
+ninja
+tabulate
+lap
+motmetrics
+filterpy
